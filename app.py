@@ -32,7 +32,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("HỆ THỐNG DỰ BÁO HẢI VĂN TỈNH QUẢNG TRỊ")
+st.title("BẢN TIN HẢI VĂN TỈNH QUẢNG TRỊ")
 st.divider()
 
 
@@ -111,7 +111,7 @@ STATION_DISPLAY = {k: v["name"] for k, v in STATIONS.items()}
 
 with st.expander("⚙️ Hiệu chỉnh dự báo triều theo địa phương (nâng cao)", expanded=False):
     st.caption(
-        "Số liệu mực nước tại trạm **Cửa Việt** đo tại CỬA SÔNG — chịu ảnh "
+        "Số liệu mực nước đo tại các trạm CỬA SÔNG — chịu ảnh "
         "hưởng dòng chảy nước ngọt/hình thái lòng sông, không thuần túy là "
         "triều biển hở, nên mô hình điều hòa thuần túy có thể lệch so với "
         "thực tế địa phương. Dự báo viên có thể hiệu chỉnh riêng từng trạm "

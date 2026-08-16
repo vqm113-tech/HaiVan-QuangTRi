@@ -42,10 +42,6 @@ def _file_age_text(path):
     age_hours = (time.time() - path.stat().st_mtime) / 3600.0
     return f"cập nhật cách đây {age_hours:.1f} giờ"
 
-LOGO_PATH = Path(__file__).resolve().parent / "HaiVan.png"
-
-if LOGO_PATH.exists():
-    st.image(str(LOGO_PATH), width=120)
 # ==========================================
 # TẢI DỮ LIỆU SÓNG / DÒNG CHẢY TỪ COPERNICUS (tùy chọn)
 # ==========================================

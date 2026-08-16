@@ -1,0 +1,9 @@
+﻿# ==========================================
+# desktop/requirements-desktop.txt
+# Chỉ cần khi ĐÓNG GÓI THÀNH .EXE (không cần khi chạy `streamlit run app.py`
+# bình thường) — cài thêm bên cạnh requirements.txt chính.
+# ==========================================
+
+pywebview>=4.4      # cửa sổ desktop native (thay vì mở tab trình duyệt)
+pyinstaller>=6.0     # đóng gói thành .exe
+pywin32>=306; sys_platform == "win32"   # pywebview trên Windows cần pywin32

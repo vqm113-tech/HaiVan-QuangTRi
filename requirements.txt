@@ -1,0 +1,18 @@
+﻿# ==========================================
+# HỆ THỐNG DỰ BÁO HẢI VĂN QUẢNG TRỊ - requirements.txt
+# ==========================================
+
+# --- Đang dùng trong luồng chính (app.py) ---
+streamlit>=1.35
+pandas>=2.0
+numpy>=1.26
+python-docx>=1.1
+openpyxl>=3.1
+scipy>=1.11
+
+# --- Cần thiết khi nối dữ liệu Copernicus (core/wave_download.py, current_download.py) ---
+# Xem README.md mục "Roadmap" trước khi bật các dòng dưới
+xarray>=2024.1
+netCDF4>=1.6
+copernicusmarine>=1.3
+requests>=2.31

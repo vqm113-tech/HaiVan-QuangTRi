@@ -29,9 +29,10 @@ from bulletin.excel_export import build_marine_excel
 # ==========================================
 st.set_page_config(
     page_title="ĐÀI KHÍ TƯỢNG THUỶ VĂN TRUNG BỘ - ĐÀI KHÍ TƯỢNG THUỶ VĂN TỈNH QUẢNG TRỊ",
+    page_icon="HaiVan.png",
     layout="wide"
 )
-
+st.image("HaiVan.png", width=100)
 st.title("BẢN TIN HẢI VĂN TỈNH QUẢNG TRỊ")
 st.divider()
 

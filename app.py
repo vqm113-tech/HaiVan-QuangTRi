@@ -5,7 +5,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 import traceback
-
+from pathlib import Path
 from config import OUTPUT_DIR, WAVE_FILE, CURRENT_FILE
 from core.qc import load_data
 from core.wave_download import download_wave_data
@@ -46,9 +46,10 @@ def _file_age_text(path):
 # ==========================================
 # TẢI DỮ LIỆU SÓNG / DÒNG CHẢY TỪ COPERNICUS (tùy chọn)
 # ==========================================
-with col_logo:
-    if LOGO_PATH.exists():
-        st.image(Image.open(LOGO_PATH), width=100)
+LOGO_PATH = Path(__file__).resolve().parent / "HaiVan.png"
+
+if LOGO_PATH.exists():
+    st.image(str(LOGO_PATH), width=120)
 with st.sidebar:
     st.subheader("📡 Dữ liệu sóng / dòng chảy / khí tượng")
     st.caption(f"Sóng: {_file_age_text(WAVE_FILE)}")

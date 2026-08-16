@@ -45,10 +45,6 @@ def _file_age_text(path):
 # ==========================================
 # TẢI DỮ LIỆU SÓNG / DÒNG CHẢY TỪ COPERNICUS (tùy chọn)
 # ==========================================
-with col_logo:
-    if LOGO_PATH.exists():
-        st.image(Image.open(LOGO_PATH), width=150)
-
 with st.sidebar:
     st.subheader("📡 Dữ liệu sóng / dòng chảy / khí tượng")
     st.caption(f"Sóng: {_file_age_text(WAVE_FILE)}")

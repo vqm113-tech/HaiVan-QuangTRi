@@ -5,7 +5,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 import traceback
-from pathlib import Path
+
 from config import OUTPUT_DIR, WAVE_FILE, CURRENT_FILE
 from core.qc import load_data
 from core.wave_download import download_wave_data
@@ -28,11 +28,11 @@ from bulletin.excel_export import build_marine_excel
 # CẤU HÌNH GIAO DIỆN STREAMLIT
 # ==========================================
 st.set_page_config(
-    page_title="ĐÀI KHÍ TƯỢNG THUỶ VĂN TRUNG BỘ - ĐÀI KHÍ TƯỢNG THUỶ VĂN TỈNH QUẢNG TRỊ",
-    page_icon="HaiVan.png",
+    page_title="Hải văn Quảng Trị",
     layout="wide"
 )
-st.title("HẢI VĂN TỈNH QUẢNG TRỊ")
+
+st.title("🌊 HỆ THỐNG DỰ BÁO HẢI VĂN QUẢNG TRỊ")
 st.divider()
 
 
@@ -41,6 +41,7 @@ def _file_age_text(path):
         return "chưa có file"
     age_hours = (time.time() - path.stat().st_mtime) / 3600.0
     return f"cập nhật cách đây {age_hours:.1f} giờ"
+
 
 # ==========================================
 # TẢI DỮ LIỆU SÓNG / DÒNG CHẢY TỪ COPERNICUS (tùy chọn)
@@ -79,28 +80,46 @@ with st.sidebar:
 
     st.divider()
     st.caption(f"📁 Báo cáo/Excel đã tạo được lưu tại:\n`{OUTPUT_DIR}`")
-    if st.button("📂 Mở thư mục chứa báo cáo"):
-        try:
-            os.startfile(OUTPUT_DIR)
-        except Exception as exc:
-            st.error(
-                f"Không mở được thư mục: {exc}\n\n"
-                f"Bạn có thể tự mở bằng cách dán đường dẫn sau vào "
-                f"File Explorer:\n{OUTPUT_DIR}"
-            )
+
+    # Trên Streamlit Cloud, app chạy trên server nên không thể "mở thư mục"
+    # trên máy người dùng (os.startfile chỉ có trên Windows, và dù có cũng
+    # sẽ mở nhầm thư mục trên server chứ không phải máy của bạn).
+    # Thay vào đó, liệt kê file và cho tải trực tiếp về máy.
+    output_files = (
+        sorted(
+            (f for f in OUTPUT_DIR.iterdir() if f.is_file()),
+            key=lambda f: f.stat().st_mtime,
+            reverse=True,
+        )
+        if OUTPUT_DIR.exists()
+        else []
+    )
+
+    if output_files:
+        with st.expander(f"⬇️ Tải file đã tạo ({len(output_files)})", expanded=False):
+            for f in output_files:
+                st.download_button(
+                    label=f"⬇️ {f.name}",
+                    data=f.read_bytes(),
+                    file_name=f.name,
+                    mime="application/octet-stream",
+                    key=f"dl_{f.name}",
+                )
+    else:
+        st.caption("Chưa có file nào trong thư mục output.")
 
 # ==========================================
 # THÔNG TIN BẢN TIN
 # ==========================================
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    forecaster = st.text_input("Dự báo viên", value=" VŨ Quang Minh, Vũ Quang Minh ")
+    forecaster = st.text_input("Dự báo viên", value="Đàm Hữu Tuyến, Nguyễn Quang Hiếu")
 with col2:
     issue_time = st.text_input("Giờ phát tin", value="16h00")
 with col3:
-    leader_name = st.text_input("Người ký", value="Vũ Quang Minh")
+    leader_name = st.text_input("Người ký (Lãnh đạo duyệt)", value="Đàm Hữu Tuyến")
 with col4:
-    shift_leader = st.text_input("Trưởng ca dự báo", value="Vũ Quang Minh")
+    shift_leader = st.text_input("Trưởng ca dự báo (cho hồ sơ HS_)", value="Đàm Hữu Tuyến")
 
 # ==========================================
 # HIỆU CHỈNH DỰ BÁO TRIỀU THEO ĐỊA PHƯƠNG (dành cho dự báo viên)
@@ -110,7 +129,7 @@ STATION_DISPLAY = {k: v["name"] for k, v in STATIONS.items()}
 
 with st.expander("⚙️ Hiệu chỉnh dự báo triều theo địa phương (nâng cao)", expanded=False):
     st.caption(
-        "Số liệu mực nước đo tại các trạm CỬA SÔNG — chịu ảnh "
+        "Số liệu mực nước tại trạm **Cửa Việt** đo tại CỬA SÔNG — chịu ảnh "
         "hưởng dòng chảy nước ngọt/hình thái lòng sông, không thuần túy là "
         "triều biển hở, nên mô hình điều hòa thuần túy có thể lệch so với "
         "thực tế địa phương. Dự báo viên có thể hiệu chỉnh riêng từng trạm "

@@ -97,14 +97,52 @@ with st.sidebar:
 
     if output_files:
         with st.expander(f"⬇️ Tải file đã tạo ({len(output_files)})", expanded=False):
+            if st.button("🗑️ Xoá tất cả file", key="del_all_files"):
+                st.session_state["confirm_del_all"] = True
+
+            if st.session_state.get("confirm_del_all"):
+                st.warning("Xác nhận xoá TẤT CẢ file trong output? Không thể hoàn tác.")
+                c1, c2 = st.columns(2)
+                if c1.button("✅ Xác nhận xoá tất cả", key="confirm_del_all_yes"):
+                    for f in output_files:
+                        try:
+                            f.unlink()
+                        except Exception:
+                            pass
+                    st.session_state["confirm_del_all"] = False
+                    st.rerun()
+                if c2.button("Huỷ", key="confirm_del_all_no"):
+                    st.session_state["confirm_del_all"] = False
+                    st.rerun()
+
+            st.divider()
+
             for f in output_files:
-                st.download_button(
+                col_dl, col_del = st.columns([4, 1])
+                col_dl.download_button(
                     label=f"⬇️ {f.name}",
                     data=f.read_bytes(),
                     file_name=f.name,
                     mime="application/octet-stream",
                     key=f"dl_{f.name}",
                 )
+                confirm_key = f"confirm_del_{f.name}"
+                if col_del.button("🗑️", key=f"del_{f.name}", help=f"Xoá {f.name}"):
+                    st.session_state[confirm_key] = True
+
+                if st.session_state.get(confirm_key):
+                    st.warning(f"Xoá file `{f.name}`?")
+                    cc1, cc2 = st.columns(2)
+                    if cc1.button("✅ Xoá", key=f"{confirm_key}_yes"):
+                        try:
+                            f.unlink()
+                        except Exception as exc:
+                            st.error(f"Không xoá được: {exc}")
+                        st.session_state[confirm_key] = False
+                        st.rerun()
+                    if cc2.button("Huỷ", key=f"{confirm_key}_no"):
+                        st.session_state[confirm_key] = False
+                        st.rerun()
     else:
         st.caption("Chưa có file nào trong thư mục output.")
 

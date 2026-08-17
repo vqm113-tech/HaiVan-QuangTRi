@@ -151,13 +151,13 @@ with st.sidebar:
 # ==========================================
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    forecaster = st.text_input("Dự báo viên", value="Đàm Hữu Tuyến, Nguyễn Quang Hiếu")
+    forecaster = st.text_input("Dự báo viên", value="Vũ Quang Minh, Vũ Quang Minh")
 with col2:
     issue_time = st.text_input("Giờ phát tin", value="16h00")
 with col3:
-    leader_name = st.text_input("Người ký (Lãnh đạo duyệt)", value="Đàm Hữu Tuyến")
+    leader_name = st.text_input("Người ký", value="Vũ Quang Minh")
 with col4:
-    shift_leader = st.text_input("Trưởng ca dự báo (cho hồ sơ HS_)", value="Đàm Hữu Tuyến")
+    shift_leader = st.text_input("Trưởng ca dự báo", value="Vũ Quang Minh")
 
 # ==========================================
 # HIỆU CHỈNH DỰ BÁO TRIỀU THEO ĐỊA PHƯƠNG (dành cho dự báo viên)
@@ -167,7 +167,7 @@ STATION_DISPLAY = {k: v["name"] for k, v in STATIONS.items()}
 
 with st.expander("⚙️ Hiệu chỉnh dự báo triều theo địa phương (nâng cao)", expanded=False):
     st.caption(
-        "Số liệu mực nước tại trạm **Cửa Việt** đo tại CỬA SÔNG — chịu ảnh "
+        "Số liệu mực nước tại các trạm đo tại CỬA SÔNG — chịu ảnh "
         "hưởng dòng chảy nước ngọt/hình thái lòng sông, không thuần túy là "
         "triều biển hở, nên mô hình điều hòa thuần túy có thể lệch so với "
         "thực tế địa phương. Dự báo viên có thể hiệu chỉnh riêng từng trạm "

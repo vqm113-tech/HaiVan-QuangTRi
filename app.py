@@ -32,7 +32,7 @@ st.set_page_config(
     page_icon="HaiVan.png",
     layout="wide"
 )
-st.title("BẢN TIN HẢI VĂN TỈNH QUẢNG TRỊ")
+st.title("HẢI VĂN TỈNH QUẢNG TRỊ")
 st.divider()
 
 
@@ -94,13 +94,13 @@ with st.sidebar:
 # ==========================================
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    forecaster = st.text_input("Dự báo viên", value="Vũ Quang Minh, Vũ Quang Minh")
+    forecaster = st.text_input("Dự báo viên", value=" VŨ Quang Minh, Vũ Quang Minh ")
 with col2:
     issue_time = st.text_input("Giờ phát tin", value="16h00")
 with col3:
-    leader_name = st.text_input("Người ký", value="Phạm Xuân Khánh")
+    leader_name = st.text_input("Người ký", value="Vũ Quang Minh")
 with col4:
-    shift_leader = st.text_input("Trưởng ca dự báo", value="Phạm Xuân Khánh")
+    shift_leader = st.text_input("Trưởng ca dự báo", value="Vũ Quang Minh")
 
 # ==========================================
 # HIỆU CHỈNH DỰ BÁO TRIỀU THEO ĐỊA PHƯƠNG (dành cho dự báo viên)

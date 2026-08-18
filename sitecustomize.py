@@ -6,21 +6,17 @@ import sys
 from pathlib import Path
 
 
-# ---------------------------------------------------------------------------
-# Streamlit Cloud: replace the legacy Windows folder-opening action with
-# browser downloads.
-# ---------------------------------------------------------------------------
+# Streamlit Cloud/Linux: replace the legacy Windows folder-opening action
+# with browser downloads.
 if not hasattr(os, "startfile") and sys.platform != "win32":
     def _startfile_linux_compat(path):
         try:
             import streamlit as st
-
             output_dir = Path(path)
             st.markdown("### 📥 TẢI FILE BÁO CÁO")
             if not output_dir.exists():
                 st.info("Chưa có file báo cáo để tải.")
                 return
-
             files = sorted(
                 (p for p in output_dir.iterdir() if p.is_file()),
                 key=lambda p: p.stat().st_mtime,
@@ -29,7 +25,6 @@ if not hasattr(os, "startfile") and sys.platform != "win32":
             if not files:
                 st.info("Chưa có file báo cáo để tải.")
                 return
-
             for file_path in files:
                 mime_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
                 with file_path.open("rb") as file_obj:
@@ -47,11 +42,7 @@ if not hasattr(os, "startfile") and sys.platform != "win32":
     os.startfile = _startfile_linux_compat
 
 
-# ---------------------------------------------------------------------------
-# Bản tin mùa: chỉnh Bảng 1 đúng bố cục mẫu và đổi đơn vị phụ lục mùa sang m.
-# Dùng wrapper sau khi generator gốc tạo DOCX, nên không ảnh hưởng các bản tin
-# 10 ngày/tháng/nguy hiểm.
-# ---------------------------------------------------------------------------
+# Bản tin mùa: hậu xử lý Bảng 1 để khớp đúng ảnh mẫu.
 try:
     from docx import Document
     from docx.shared import Pt, Twips
@@ -60,16 +51,8 @@ try:
     import bulletin.bulletin_generator as _bg
 
     _original_seasonal_bulletin = _bg.create_qtri_seasonal_bulletin
-    _original_appendix_tables = _bg._add_seasonal_appendix_tables
 
-    def _set_seasonal_table_widths(table, widths_dxa):
-        table.autofit = False
-        for i, width in enumerate(widths_dxa):
-            table.columns[i].width = Twips(width)
-            for row in table.rows:
-                row.cells[i].width = Twips(width)
-
-    def _format_seasonal_t1_cell(cell, text, bold=False, size=10.5):
+    def _format_seasonal_t1_cell(cell, text, bold=False, size=11):
         cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         p = cell.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -104,16 +87,21 @@ try:
 
         station_name = data_dict.get("table1_station_name", "Cồn Cỏ")
 
-        # Bố cục đúng ảnh mẫu: 3 cột mô tả + 3 cột kỳ, một hàng tiêu đề.
+        # ĐÚNG BẢNG TRONG ẢNH:
+        # - 6 cột: 3 cột mô tả + 3 cột kỳ/tháng.
+        # - "Yếu tố" gộp ngang 3 cột đầu.
+        # - Mỗi kỳ/tháng là 1 cột duy nhất.
+        # - 7 dòng dữ liệu: 4 dòng thủy triều + 3 dòng sóng.
         new_table = doc.add_table(rows=1, cols=6)
         new_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        new_table.autofit = False
         _bg.set_table_borders(new_table)
 
         hdr = new_table.rows[0].cells
         merged_hdr = hdr[0].merge(hdr[2])
-        _format_seasonal_t1_cell(merged_hdr, "Yếu tố", bold=True, size=11)
+        _format_seasonal_t1_cell(merged_hdr, "Yếu tố", bold=True, size=12)
         for i, label in enumerate(labels):
-            _format_seasonal_t1_cell(hdr[3 + i], label, bold=True, size=10.5)
+            _format_seasonal_t1_cell(hdr[3 + i], label, bold=True, size=11)
 
         specs = [
             ("Thủy triều", "Nước lớn", "Hmax (cm)", "hmax"),
@@ -132,8 +120,8 @@ try:
             row_idx = len(new_table.rows) - 1
             group_starts.setdefault(group_name, row_idx)
             group_ends[group_name] = row_idx
-            _format_seasonal_t1_cell(cells[1], sub_name, size=10.5)
-            _format_seasonal_t1_cell(cells[2], metric, size=10.5)
+            _format_seasonal_t1_cell(cells[1], sub_name, size=11)
+            _format_seasonal_t1_cell(cells[2], metric, size=11)
 
             for period_idx, ext in enumerate(rows):
                 value = ext.get(key) if ext else None
@@ -143,7 +131,7 @@ try:
                     value = str(int(round(float(value))))
                 elif key in ("hmax_day", "hmin_day", "wave_day"):
                     value = str(int(value)) if str(value).isdigit() else str(value)
-                _format_seasonal_t1_cell(cells[3 + period_idx], value, size=10.5)
+                _format_seasonal_t1_cell(cells[3 + period_idx], value, size=11)
 
         for group_name in ("Thủy triều", "Sóng"):
             _bg.merge_vertical(
@@ -151,75 +139,91 @@ try:
                 group_name, bold=False, size=11,
             )
 
-        # Cột cố định para vừa A4 đứng; các kỳ cuối đủ rộng cho ngày/giá trị.
-        _set_seasonal_table_widths(new_table, [1120, 1050, 1750, 1700, 1700, 1700])
+        # A4 đứng, lề trái 3 cm/phải 2 cm: tổng khoảng 16 cm.
+        # Tỷ lệ cột theo ảnh mẫu: 3 cột mô tả rộng hơn, 3 cột kỳ gần đều nhau.
+        widths = [1450, 1600, 1850, 1390, 1390, 1390]
+        for i, width in enumerate(widths):
+            new_table.columns[i].width = Twips(width)
+            for row in new_table.rows:
+                row.cells[i].width = Twips(width)
 
-        # Đặt bảng mới đúng vị trí bảng cũ.
+        # Thay đúng vị trí bảng cũ.
         old_element = old_table._element
         parent = old_element.getparent()
-        new_element = new_table._element
-        parent.replace(old_element, new_element)
+        parent.replace(old_element, new_table._element)
 
-        # Tiêu đề Bảng 1 theo đúng kiểu ảnh mẫu.
+        # Tiêu đề đúng mẫu ảnh: "... từ tháng 4 đến ngày 15 tháng 6/2026".
         for paragraph in doc.paragraphs:
             if paragraph.text.strip().startswith("Bảng 1:"):
-                if len(labels) >= 3:
-                    first = labels[0].replace("Tháng ", "tháng ")
-                    first_month = first.split("/")[0]
-                    last = labels[2]
-                    m = re.search(r"01-(\d+)/(\d+)/(\d+)", last)
-                    if m:
-                        title = (
-                            f"Bảng 1: Đặc trưng sóng, thủy triều tại trạm Hải văn {station_name} "
-                            f"từ tháng {first_month} đến ngày {int(m.group(1))} tháng {int(m.group(2))}/{m.group(3)}"
-                        )
-                    else:
-                        title = paragraph.text
+                first_month = None
+                last_day = None
+                last_month = None
+                last_year = None
+                m0 = re.search(r"(?:Tháng|tháng)\s+(\d+)/(\d+)", labels[0])
+                m2 = re.search(r"01-(\d+)/(\d+)/(\d+)", labels[2])
+                if m0:
+                    first_month = int(m0.group(1))
+                if m2:
+                    last_day = int(m2.group(1))
+                    last_month = int(m2.group(2))
+                    last_year = int(m2.group(3))
+                if first_month is not None and last_day is not None:
+                    title = (
+                        f"Bảng 1: Đặc trưng sóng, thủy triều tại trạm Hải văn {station_name} "
+                        f"từ tháng {first_month} đến ngày {last_day} tháng {last_month}/{last_year}"
+                    )
                 else:
                     title = paragraph.text
-                paragraph.text = title
+                paragraph.clear()
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                for run in paragraph.runs:
-                    run.bold = True
-                    run.font.name = "Times New Roman"
-                    run.font.size = Pt(11)
+                paragraph.paragraph_format.space_after = Pt(2)
+                r = paragraph.add_run(title)
+                r.bold = True
+                r.font.name = "Times New Roman"
+                r.font.size = Pt(11)
                 break
 
         doc.save(output_path)
 
-    def _fixed_seasonal_bulletin(data_dict, forecaster=None, issue_time=None, output_path="Ban_tin_Hai_van_Mua_Quang_Tri.docx"):
+    def _fixed_seasonal_bulletin(data_dict, forecaster=None, issue_time=None,
+                                 output_path="Ban_tin_Hai_van_Mua_Quang_Tri.docx"):
         result = _original_seasonal_bulletin(
             data_dict, forecaster=forecaster, issue_time=issue_time, output_path=output_path
         )
         try:
             _replace_seasonal_table1(result, data_dict)
         except Exception:
-            # Không làm hỏng việc xuất bản tin nếu chỉ phần định dạng hậu xử lý gặp lỗi.
             pass
         return result
 
     _bg.create_qtri_seasonal_bulletin = _fixed_seasonal_bulletin
 
+except Exception:
+    pass
+
+
+# Hồ sơ mùa: Phụ lục 1 và Phụ lục 2 dùng đơn vị MÉT (m), đồng thời vẫn ép
+# các cột vừa khổ A4 như yêu cầu.
+try:
+    import bulletin.bulletin_generator as _bg2
+
     def _fixed_seasonal_appendix_tables(doc, data_dict):
-        # Hồ sơ mùa: Phụ lục 1 và 2 dùng MÉT (m), không dùng cm.
         section = doc.sections[-1]
         n_months = len(data_dict.get("forecast_months", [])) or 3
-        col_widths = _bg._compute_tide_table_col_widths(
+        col_widths = _bg2._compute_tide_table_col_widths(
             section.page_width, section.left_margin, section.right_margin, n_months
         )
-        _bg._render_tide_zone_table(
+        _bg2._render_tide_zone_table(
             doc, data_dict,
             "Phụ lục 1: Kết quả dự báo theo phương pháp phân tích hàm điều hòa",
             col_widths, use_cm=False,
         )
-        _bg._render_tide_zone_table(
+        _bg2._render_tide_zone_table(
             doc, data_dict,
             "Phụ lục 2: Chọn kết quả dự báo",
             col_widths, use_cm=False,
         )
 
-    _bg._add_seasonal_appendix_tables = _fixed_seasonal_appendix_tables
-
+    _bg2._add_seasonal_appendix_tables = _fixed_seasonal_appendix_tables
 except Exception:
-    # Không chặn Streamlit khởi động nếu một phiên bản môi trường thiếu docx.
     pass

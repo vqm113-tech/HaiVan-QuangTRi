@@ -54,7 +54,7 @@ try:
 
     _original_seasonal_bulletin = _bg.create_qtri_seasonal_bulletin
 
-    def _format_seasonal_t1_cell(cell, text, bold=False, size=11):
+    def _format_seasonal_t1_cell(cell, text, bold=False, size=13):
         cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         p = cell.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -94,9 +94,9 @@ try:
 
         hdr = new_table.rows[0].cells
         merged_hdr = hdr[0].merge(hdr[2])
-        _format_seasonal_t1_cell(merged_hdr, "Yếu tố", bold=True, size=12)
+        _format_seasonal_t1_cell(merged_hdr, "Yếu tố", bold=True, size=13)
         for i, label in enumerate(labels):
-            _format_seasonal_t1_cell(hdr[3 + i], label, bold=True, size=11)
+            _format_seasonal_t1_cell(hdr[3 + i], label, bold=True, size=13)
 
         specs = [
             ("Thủy triều", "Nước lớn", "Hmax (cm)", "hmax"),
@@ -115,8 +115,8 @@ try:
             row_idx = len(new_table.rows) - 1
             group_starts.setdefault(group_name, row_idx)
             group_ends[group_name] = row_idx
-            _format_seasonal_t1_cell(cells[1], sub_name, size=11)
-            _format_seasonal_t1_cell(cells[2], metric, size=11)
+            _format_seasonal_t1_cell(cells[1], sub_name, size=13)
+            _format_seasonal_t1_cell(cells[2], metric, size=13)
             for period_idx, ext in enumerate(rows):
                 value = ext.get(key) if ext else None
                 if value is None or value == "":
@@ -125,12 +125,12 @@ try:
                     value = str(int(round(float(value))))
                 elif key in ("hmax_day", "hmin_day", "wave_day"):
                     value = str(int(value)) if str(value).isdigit() else str(value)
-                _format_seasonal_t1_cell(cells[3 + period_idx], value, size=11)
+                _format_seasonal_t1_cell(cells[3 + period_idx], value, size=13)
 
         for group_name in ("Thủy triều", "Sóng"):
             _bg.merge_vertical(
                 new_table, 0, group_starts[group_name], group_ends[group_name],
-                group_name, bold=False, size=11,
+                group_name, bold=False, size=13,
             )
 
         widths = [1450, 1600, 1850, 1390, 1390, 1390]
@@ -166,7 +166,7 @@ try:
                 r = paragraph.add_run(title)
                 r.bold = True
                 r.font.name = "Times New Roman"
-                r.font.size = Pt(11)
+                r.font.size = Pt(13)
                 break
         doc.save(output_path)
 

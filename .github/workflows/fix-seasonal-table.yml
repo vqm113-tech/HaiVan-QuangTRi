@@ -1,0 +1,138 @@
+name: Fix seasonal bulletin Table 1
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-table1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Replace seasonal Table 1 generator
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path("bulletin/bulletin_generator.py")
+          text = path.read_text(encoding="utf-8")
+
+          start = text.find("    station_name = data_dict.get('table1_station_name', 'Cồn Cỏ')")
+          end_marker = "    # -------------------------------------------------------------------------\n    # 2. DỰ BÁO HẢI VĂN 3 THÁNG TỚI"
+          end = text.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit("Không tìm thấy đúng khối Bảng 1 của bản tin mùa; dừng để tránh ghi đè sai code.")
+
+          replacement = '''    station_name = data_dict.get('table1_station_name', 'Cồn Cỏ')
+    table1_labels = data_dict.get('table1_labels', [])
+    table1_rows = data_dict.get('table1_rows', [])
+
+    p_t1 = doc.add_paragraph()
+    p_t1.paragraph_format.space_after = Pt(2)
+    p_t1.add_run(
+        f"Bảng 1: Đặc trưng sóng, thủy triều tại trạm Hải văn {station_name} "
+        f"{data_dict.get('table1_period_label', data_dict.get('title_period', ''))}"
+    ).bold = True
+
+    # Bảng 1 bản tin mùa: 6 cột = Yếu tố | Nhóm | Chỉ tiêu | 3 kỳ dự báo.
+    # Cấu trúc rowspan/khung được dựng riêng để khớp mẫu: Thủy triều gộp
+    # dọc 4 dòng, Nước lớn/Nước ròng gộp 2 dòng; Sóng gộp 3 dòng.
+    n_periods = len(table1_labels) or 3
+    n_periods = min(n_periods, 3)
+    labels = list(table1_labels[:n_periods])
+    while len(labels) < 3:
+        labels.append("")
+    t1 = doc.add_table(rows=2, cols=3 + 3)
+    t1.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t1.autofit = False
+    set_table_borders(t1)
+
+    # Khổ nội dung A4; 3 cột mô tả + 3 cột kỳ dự báo.
+    content_width = section.page_width - section.left_margin - section.right_margin
+    widths = [Cm(2.0), Cm(2.5), Cm(2.8),
+              int(content_width - Cm(7.3)) // 3,
+              int(content_width - Cm(7.3)) // 3,
+              int(content_width - Cm(7.3)) - 2 * (int(content_width - Cm(7.3)) // 3)]
+    for row in t1.rows:
+        for i, w in enumerate(widths):
+            row.cells[i].width = w
+
+    merge_vertical(t1, 0, 0, 1, "Yếu tố")
+    merge_vertical(t1, 1, 0, 1, "Nhóm")
+    merge_vertical(t1, 2, 0, 1, "Chỉ tiêu")
+    for i, label in enumerate(labels):
+        format_cell(t1.cell(0, 3 + i), label, bold=True, size=12)
+        format_cell(t1.cell(1, 3 + i), "", size=12)
+
+    rows_spec = [
+        ("Thủy triều", "Nước lớn", "Hmax (cm)", "hmax"),
+        ("Thủy triều", "Nước lớn", "Ngày xuất hiện", "hmax_day"),
+        ("Thủy triều", "Nước ròng", "Hmin (cm)", "hmin"),
+        ("Thủy triều", "Nước ròng", "Ngày xuất hiện", "hmin_day"),
+        ("Sóng", "", "Độ cao sóng lớn nhất (m)", "wave_max"),
+        ("Sóng", "", "Hướng sóng", "wave_dir"),
+        ("Sóng", "", "Ngày xuất hiện", "wave_day"),
+    ]
+
+    group_starts = {}
+    subgroup_starts = {}
+    for group_name, subgroup, indicator, key in rows_spec:
+        row = t1.add_row()
+        row_cells = row.cells
+        row_idx = len(t1.rows) - 1
+        group_starts.setdefault(group_name, row_idx)
+        if subgroup:
+            subgroup_starts.setdefault(subgroup, row_idx)
+        format_cell(row_cells[2], indicator, size=11)
+        for i in range(3):
+            ext = table1_rows[i] if i < len(table1_rows) else {}
+            val = ext.get(key) if ext else None
+            if key in ("hmax", "hmin") and val is not None:
+                # Bảng 1 giữ đơn vị cm theo mẫu bản tin.
+                try:
+                    val = f"{float(val):.0f}"
+                except (TypeError, ValueError):
+                    pass
+            format_cell(row_cells[3 + i], "-" if val is None else str(val), size=11)
+
+        if subgroup:
+            format_cell(row_cells[1], subgroup, size=11)
+        else:
+            format_cell(row_cells[1], "", size=11)
+
+    last_row = len(t1.rows) - 1
+    # Gộp nhóm Thủy triều và Sóng theo đúng chiều dọc.
+    merge_vertical(t1, 0, group_starts["Thủy triều"], group_starts["Sóng"] - 1, "Thủy triều", size=11)
+    merge_vertical(t1, 0, group_starts["Sóng"], last_row, "Sóng", size=11)
+    # Gộp Nước lớn và Nước ròng, mỗi nhóm 2 dòng.
+    merge_vertical(t1, 1, subgroup_starts["Nước lớn"], subgroup_starts["Nước lớn"] + 1, "Nước lớn", size=11)
+    merge_vertical(t1, 1, subgroup_starts["Nước ròng"], subgroup_starts["Nước ròng"] + 1, "Nước ròng", size=11)
+
+    doc.add_paragraph().paragraph_format.space_after = Pt(6)
+
+'''
+
+          text = text[:start] + replacement + text[end:]
+          path.write_text(text, encoding="utf-8")
+
+      - name: Commit generated fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bulletin/bulletin_generator.py
+          if git diff --cached --quiet; then
+            echo "No changes needed"
+          else
+            git commit -m "Fix seasonal bulletin Table 1 layout"
+            git push
+          fi

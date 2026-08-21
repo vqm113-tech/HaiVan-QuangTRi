@@ -1,0 +1,96 @@
+name: Apply Bảng 1 from HaiVan(1)
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor == 'vqm113-tech'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Replace seasonal Bảng 1
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('bulletin/bulletin_generator.py')
+          s = p.read_text(encoding='utf-8')
+          start = s.index("    t1 = doc.add_table(rows=2, cols=2 + len(table1_labels))")
+          end = s.index("    doc.add_paragraph().paragraph_format.space_after = Pt(6)", start)
+          new = '''    # 3 CỘT NHÃN (nhóm lớn / phân nhóm / chỉ tiêu cụ thể) + N cột kỳ — đúng
+    # cấu trúc ảnh mẫu người dùng cung cấp.
+    t1 = doc.add_table(rows=2, cols=3 + len(table1_labels))
+    t1.alignment = WD_TABLE_ALIGNMENT.CENTER
+    set_table_borders(t1)
+    hdr_yeu_to = t1.cell(0, 0).merge(t1.cell(1, 2))
+    format_cell(hdr_yeu_to, "Yếu tố", bold=True)
+    for idx, label in enumerate(table1_labels):
+        period_hdr = t1.cell(0, 3 + idx).merge(t1.cell(1, 3 + idx))
+        format_cell(period_hdr, label, bold=True)
+
+    # (nhóm lớn, phân nhóm | None, nhãn chỉ tiêu, khóa dữ liệu)
+    t1_rows_spec = [
+        ("Thủy triều", "Nước lớn", "Hmax (m)", "hmax"),
+        ("Thủy triều", "Nước lớn", "Ngày xuất hiện", "hmax_day"),
+        ("Thủy triều", "Nước ròng", "Hmin (m)", "hmin"),
+        ("Thủy triều", "Nước ròng", "Ngày xuất hiện", "hmin_day"),
+        ("Sóng", None, "Độ cao sóng lớn nhất (m)", "wave_max"),
+        ("Sóng", None, "Hướng sóng", "wave_dir"),
+        ("Sóng", None, "Ngày xuất hiện", "wave_day"),
+    ]
+
+    group_row_start = {}
+    subgroup_row_start = {}
+    for group_name, subgroup, label, key in t1_rows_spec:
+        row_cells = t1.add_row().cells
+        row_idx = len(t1.rows) - 1
+        group_row_start.setdefault(group_name, row_idx)
+        if subgroup is None:
+            label_cell = row_cells[1].merge(row_cells[2])
+            format_cell(label_cell, label)
+        else:
+            subgroup_key = (group_name, subgroup)
+            subgroup_row_start.setdefault(subgroup_key, row_idx)
+            format_cell(row_cells[2], label)
+        for m_i, ext in enumerate(table1_rows):
+            val = ext.get(key) if ext else None
+            if val is not None and key in ("hmax", "hmin"):
+                val = f"{val / 100.0:.2f}"
+            format_cell(row_cells[3 + m_i], "-" if val is None else str(val))
+    region_row_end = len(t1.rows) - 1
+
+    group_names_in_order = []
+    for group_name, _, _, _ in t1_rows_spec:
+        if group_name not in group_names_in_order:
+            group_names_in_order.append(group_name)
+    for i, group_name in enumerate(group_names_in_order):
+        g_start = group_row_start[group_name]
+        g_end = (group_row_start[group_names_in_order[i + 1]] - 1
+                 if i + 1 < len(group_names_in_order) else region_row_end)
+        merge_vertical(t1, 0, g_start, g_end, group_name)
+
+    subgroup_keys_in_order = []
+    for group_name, subgroup, _, _ in t1_rows_spec:
+        if subgroup is not None and (group_name, subgroup) not in subgroup_keys_in_order:
+            subgroup_keys_in_order.append((group_name, subgroup))
+    for i, sg_key in enumerate(subgroup_keys_in_order):
+        s_start = subgroup_row_start[sg_key]
+        s_end = (subgroup_row_start[subgroup_keys_in_order[i + 1]] - 1
+                 if i + 1 < len(subgroup_keys_in_order) else group_row_start.get("Sóng", region_row_end + 1) - 1)
+        merge_vertical(t1, 1, s_start, s_end, sg_key[1])
+
+'''
+          p.write_text(s[:start] + new + s[end:], encoding='utf-8')
+          PY
+          rm -f sitecustomize.py .github/workflows/fix-seasonal-table.yml .github/workflows/apply-bang1-from-zip.yml
+          git config user.name 'vqm113-tech'
+          git config user.email 'vqm.113@gmail.com'
+          git add bulletin/bulletin_generator.py sitecustomize.py .github/workflows/fix-seasonal-table.yml .github/workflows/apply-bang1-from-zip.yml
+          git commit -m 'Sửa Bảng 1 bản tin mùa theo mẫu chuẩn Cồn Cỏ' || exit 0
+          git push origin main

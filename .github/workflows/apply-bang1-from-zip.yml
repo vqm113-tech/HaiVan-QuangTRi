@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   apply:
-    if: github.actor == 'vqm113-tech'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,6 +90,6 @@ jobs:
           rm -f sitecustomize.py .github/workflows/fix-seasonal-table.yml .github/workflows/apply-bang1-from-zip.yml
           git config user.name 'vqm113-tech'
           git config user.email 'vqm.113@gmail.com'
-          git add bulletin/bulletin_generator.py sitecustomize.py .github/workflows/fix-seasonal-table.yml .github/workflows/apply-bang1-from-zip.yml
+          git add -A
           git commit -m 'Sửa Bảng 1 bản tin mùa theo mẫu chuẩn Cồn Cỏ' || exit 0
           git push origin main
